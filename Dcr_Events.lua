@@ -582,7 +582,11 @@ end
 
 function D:DECURSIVE_TALENTS_AVAILABLE()
     D:Debug("|cFFFF0000Talents are available recnfiguration in 1 second|r");
-    self:ScheduleDelayedCall("Dcr_ReConfigure", self.ReConfigure, 1, self);
+    -- Call SetConfiguration directly (not ReConfigure) so the addon fully initializes
+    -- even if the initial SetConfiguration call during OnEnable failed (e.g. corrupt
+    -- SavedVariables). ReConfigure bails out when DcrFullyInitialized is false, which
+    -- would leave the addon permanently broken. SetConfiguration has no such guard.
+    self:ScheduleDelayedCall("Dcr_ReConfigure", self.SetConfiguration, 1, self);
 
     if time() - self.db.global.LastVersionAnnounce > 3600/2 then
         -- wait 10 seconds and announce Decursive's version
