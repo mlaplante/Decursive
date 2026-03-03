@@ -11,7 +11,6 @@ jobs:
     permissions:
       contents: write
     env:
-        CF_API_KEY: ${{ secrets.CF_API_KEY }}
         #WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
         #WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
         GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
@@ -32,26 +31,3 @@ jobs:
           !contains(github.event.head_commit.message, '#skipall')
         uses: BigWigsMods/packager@v2
 
-      - name: Package classic
-        if: >-
-          !contains(github.event.head_commit.message, '#skipclassic') &&
-          !contains(github.event.head_commit.message, '#skipall')
-        uses: BigWigsMods/packager@v2
-        with:
-          args: -g classic
-
-      - name: Package mists
-        if: >-
-          !contains(github.event.head_commit.message, '#skipmop') &&
-          !contains(github.event.head_commit.message, '#skipall')
-        uses: BigWigsMods/packager@v2
-        with:
-          args: -g mists
-
-      - name: Package bcc
-        if: >-
-          !contains(github.event.head_commit.message, '#skipbcc') &&
-          !contains(github.event.head_commit.message, '#skipall')
-        uses: BigWigsMods/packager@v2
-        with:
-          args: -g bcc
