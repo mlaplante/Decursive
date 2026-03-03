@@ -2315,6 +2315,9 @@ do
 
     function D:UpdateMacro () -- {{{
 
+        if not D.DcrFullyInitialized then
+            return false;
+        end
 
         if D.profile.DisableMacroCreation then
             return false;
