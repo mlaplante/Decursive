@@ -1165,6 +1165,7 @@ function D:OnEnable() -- called after PLAYER_LOGIN -- {{{
 
     if (FirstEnable) then
         D:ExportOptions ();
+        T._CatchAllErrors = "OnEnable"; -- ExportOptions clears T._CatchAllErrors; restore it
         -- configure the message frame for Decursive
         DecursiveTextFrame:SetFading(true);
         DecursiveTextFrame:SetFadeDuration(D.CONF.TEXT_LIFETIME / 3);
@@ -1181,8 +1182,13 @@ function D:OnEnable() -- called after PLAYER_LOGIN -- {{{
         end
     end); -- }}}
 
-    D:SecureHook("CastSpellByName", "HOOK_CastSpellByName");
-    D:SecureHook(C_Item, "UseItemByName",   "HOOK_UseItemByName");
+    -- CastSpellByName and C_Item.UseItemByName may not exist on all game versions
+    if CastSpellByName then
+        D:SecureHook("CastSpellByName", "HOOK_CastSpellByName");
+    end
+    if C_Item and C_Item.UseItemByName then
+        D:SecureHook(C_Item, "UseItemByName", "HOOK_UseItemByName");
+    end
 
     -- these events are automatically stopped when the addon is disabled by Ace
 
