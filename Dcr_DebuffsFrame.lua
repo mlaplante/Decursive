@@ -1468,12 +1468,10 @@ do
             end
 
             -- UnitIsVisible() behavior is not 100% reliable so we also use UnitLevel() that will return -1 when the Unit is too far...
-            -- Phase 4A: On Midnight, also use UnitInRange() for a proactive dispel-range check.
-        elseif not UnitIsVisible(Unit) or UnitLevel(Unit) < 1
-            or (DC.MN and UnitInRange and (UnitInRange(Unit) == false)) then
-            -- Phase 4A: UnitInRange returns (r, c); 'c' is a secret boolean on Midnight
-            -- and cannot be boolean-tested from insecure code. Use (r == false) strict value
-            -- comparison instead of 'c and not r' to detect out-of-range without touching c.
+            -- Phase 4A: UnitInRange() was intended here for proactive dispel-range detection on
+            -- Midnight, but both return values (r, c) are secret booleans that cannot be used
+            -- (boolean-tested OR compared) from insecure addon code. Removed entirely.
+        elseif not UnitIsVisible(Unit) or UnitLevel(Unit) < 1 then
             if PreviousStatus ~= FAR then
                 self.Color = MF_colors[FAR];
                 self.UnitStatus = FAR;
