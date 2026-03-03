@@ -1100,7 +1100,7 @@ function D:OnInitialize() -- Called on ADDON_LOADED by AceAddon -- {{{
 
     -- Register slashes command {{{
     self:RegisterChatCommand("dcrdiag"      ,function() T._SelfDiagnostic(true, true)               end         );
-    self:RegisterChatCommand("decursive"    ,function() LibStub("AceConfigDialog-3.0"):Open(D.name) end         );
+    self:RegisterChatCommand("decursive"    ,function() if D.DcrFullyInitialized then LibStub("AceConfigDialog-3.0"):Open(D.name) else D:Print(L["DECURSIVE_NOT_INITIALIZED"] or "Decursive is not fully initialized yet. Please run /dcrdiag for details.") end end         );
     self:RegisterChatCommand("dcrpradd"     ,function() D:AddTargetToPriorityList()                 end, false  );
     self:RegisterChatCommand("dcrprclear"   ,function() D:ClearPriorityList()                       end, false  );
     self:RegisterChatCommand("dcrprshow"    ,function() D:ShowHidePriorityListUI()                  end, false  );

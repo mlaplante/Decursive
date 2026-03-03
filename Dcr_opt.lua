@@ -2132,6 +2132,7 @@ function D:SetCureCheckBoxNum (Type, checkBox)
 end
 
 function D:GetCureOrderTable ()
+    if not D.classprofile then return {} end
     local activeSpec = GetSpecialization();
     local generalCureOrder = D.classprofile.CureOrder;
 
