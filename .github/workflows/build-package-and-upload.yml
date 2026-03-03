@@ -2,16 +2,14 @@ name: Check and build addon
 
 on:
   push:
-    branches:
-      - master
     tags:
-      - '*'
-    # paths-ignore:
-    #- '.github/**'
+      - '**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
         CF_API_KEY: ${{ secrets.CF_API_KEY }}
         #WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
@@ -19,15 +17,9 @@ jobs:
         GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Rename WhatsNew.md
-        if: github.ref_type == 'branch'
-        run: |
-           mv -vf WhatsNew.md WhatsNew_.md
-           echo "file moved"
 
       - name: Run luacheck
         uses: BigWigsMods/actions/luacheck@master
@@ -38,6 +30,28 @@ jobs:
         if: >-
           !contains(github.event.head_commit.message, '#skipretail') &&
           !contains(github.event.head_commit.message, '#skipall')
-        uses: BigWigsMods/packager@master
+        uses: BigWigsMods/packager@v2
 
-     
+      - name: Package classic
+        if: >-
+          !contains(github.event.head_commit.message, '#skipclassic') &&
+          !contains(github.event.head_commit.message, '#skipall')
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -g classic
+
+      - name: Package mists
+        if: >-
+          !contains(github.event.head_commit.message, '#skipmop') &&
+          !contains(github.event.head_commit.message, '#skipall')
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -g mists
+
+      - name: Package bcc
+        if: >-
+          !contains(github.event.head_commit.message, '#skipbcc') &&
+          !contains(github.event.head_commit.message, '#skipall')
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -g bcc
