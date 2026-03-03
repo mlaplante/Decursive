@@ -1227,6 +1227,8 @@ function D:OnEnable() -- called after PLAYER_LOGIN -- {{{
         D.eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
     else
         D.eventFrame:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
+        D.eventFrame:RegisterEvent("RAID_PLAYER_DISPELLABLE")   -- Phase 2A: per-unit dispel type cache
+        D.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")     -- Phase 4B: timed retry blacklist
     end
 
     D.eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN");
@@ -1296,12 +1298,17 @@ function D:SetConfiguration() -- {{{
     D.Status.delayedDebuffOccurences = 0;
     D.Status.delayedUnDebuffOccurences = 0;
     D.Status.prio_macro = {};
+    D.Status.InSecretMode = false;   -- Phase 1.4: true when Midnight secret aura restrictions are active
+    D.Status.DispelTypeCache = {};   -- Phase 2A: per-unit dispel type cache from RAID_PLAYER_DISPELLABLE
 
     D.Stealthed_Units = {};
 
     -- if we log in and we are already fighting...
     if InCombatLockdown() then
         D.Status.Combat = true;
+        if DC.MN then
+            D.Status.InSecretMode = true;
+        end
     end
 
     if DC.MN then

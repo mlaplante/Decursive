@@ -86,6 +86,7 @@ local InCombatLockdown  = _G.InCombatLockdown;
 local GetRaidTargetIndex= _G.GetRaidTargetIndex;
 local CreateFrame       = _G.CreateFrame;
 local canaccessvalue    = _G.canaccessvalue or function(_) return true; end
+local UnitInRange       = _G.UnitInRange; -- Phase 4A: pre-cast range check
 
 -- NS def
 D.MicroUnitF = {};
@@ -160,10 +161,30 @@ local AvailableModifier = { -- {{{
 
 -- MicroUnitF STATIC methods {{{
 
+-- Phase 3B: Update the small mode indicator dot on the MUF drag handle.
+-- Shows a green dot (Full mode, OOC) or amber dot (Limited mode, in combat on Midnight).
+-- Created lazily on first call so it's safe to call before full MUF init.
+function D:UpdateModeIndicator()
+    if not DC.MN then return end
+    if not D.MFContainerHandle then return end
+    -- Create FontString child lazily on first call
+    if not D.MFHandleModeText then
+        D.MFHandleModeText = D.MFContainerHandle:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall");
+        D.MFHandleModeText:SetPoint("BOTTOM", D.MFContainerHandle, "TOP", 0, 2);
+    end
+    if D.Status.InSecretMode then
+        D.MFHandleModeText:SetText("|cFFFF8800\226\172\164|r"); -- amber dot (U+2B24)
+    else
+        D.MFHandleModeText:SetText("|cFF00FF00\226\172\164|r"); -- green dot
+    end
+    D.MFHandleModeText:Show();
+end
+
 function MicroUnitF:Show()
     -- change handle position here depending on reverse display option or in INIT?
     D.MFContainer:SetScale(D.profile.DebuffsFrameElemScale);
     self:Place (); -- not strickly necessary but avoid glitches when switching between profiles where the scale is different...
+    D:UpdateModeIndicator(); -- Phase 3B: refresh mode indicator on show
     D.MFContainer:Show();
     D.profile.ShowDebuffsFrame = true;
     self:ResetAllPositions();
@@ -977,10 +998,25 @@ function MicroUnitF.OnPreClick(frame, Button) -- {{{
         D:Println(L["HLP_NOTHINGTOCURE"]);
 
         -- detect wrong button click and prepare for not-in-line-of-sight casting failures in coordination with CLEU (unavailable in MN)
-    elseif (frame.Object.UnitStatus == AFFLICTED and frame.Object.Debuffs[1] and not frame.Object.Debuffs[1].secretMode) then
-        local NeededPrio = D:GiveSpellPrioNum(frame.Object.Debuffs[1].Type);
+    elseif (frame.Object.UnitStatus == AFFLICTED and frame.Object.Debuffs[1]) then
         local Unit = frame.Object.CurrUnit; -- shortcut
 
+        -- Phase 2B: In secret mode, recover the dispel type from the RAID_PLAYER_DISPELLABLE
+        -- cache (TTL=3s) to enable type-level wrong-modifier alerting without spell IDs.
+        -- Out of combat the full debuff type from Debuffs[1].Type is used as before.
+        local dispelType;
+        if not frame.Object.Debuffs[1].secretMode then
+            dispelType = frame.Object.Debuffs[1].Type;
+        else
+            local cached = D.Status.DispelTypeCache and D.Status.DispelTypeCache[Unit];
+            if cached and (GetTime() - cached.timestamp) < 3 then
+                dispelType = cached.type; -- type-level recovery from RAID_PLAYER_DISPELLABLE
+                D:Debug("Phase 2B: recovered dispel type %s for %s from cache", dispelType, Unit);
+            end
+            -- nil dispelType when cache is stale/missing: skip alert, fall through to ClickCastingWIP
+        end
+
+        local NeededPrio = dispelType and D:GiveSpellPrioNum(dispelType);
 
         -- there is no spell for the requested prio ? (no spell registered to this modifier+mousebutton)
         if modifier and RequestedPrio and not D:tcheckforval(D.Status.CuringSpellsPrio, RequestedPrio) then
@@ -1001,13 +1037,13 @@ function MicroUnitF.OnPreClick(frame, Button) -- {{{
             end
         end
 
-        if RequestedPrio and NeededPrio ~= RequestedPrio then
+        if RequestedPrio and NeededPrio and NeededPrio ~= RequestedPrio then
             D:errln(L["HLP_WRONGMBUTTON"]);
-            if NeededPrio and MF_colors[NeededPrio] then
+            if MF_colors[NeededPrio] then
                 D:Println(L["HLP_USEXBUTTONTOCURE"], D:ColorText(DC.MouseButtonsReadable[ D.db.global.MouseButtons[NeededPrio] ], D:NumToHexColor(MF_colors[NeededPrio])));
                 --@debug@
             else
-                D:AddDebugText("Button wrong click info bug: NeededPrio:", NeededPrio, "Unit:", Unit, "RequestedPrio:", RequestedPrio, "Button clicked:", Button, "MF_colors:", unpack(MF_colors), "Debuff Type:", frame.Object.Debuffs[1].Type);
+                D:AddDebugText("Button wrong click info bug: NeededPrio:", NeededPrio, "Unit:", Unit, "RequestedPrio:", RequestedPrio, "Button clicked:", Button, "MF_colors:", unpack(MF_colors), "Debuff Type:", dispelType or "nil(secretMode)");
                 --@end-debug@
             end
         elseif RequestedPrio and D.Status.HasSpell then -- useless block in Midnight as there is no CLEU anymore to detect cast failures.
@@ -1432,7 +1468,9 @@ do
             end
 
             -- UnitIsVisible() behavior is not 100% reliable so we also use UnitLevel() that will return -1 when the Unit is too far...
-        elseif not UnitIsVisible(Unit) or UnitLevel(Unit) < 1 then
+            -- Phase 4A: On Midnight, also use UnitInRange() for a proactive dispel-range check.
+        elseif not UnitIsVisible(Unit) or UnitLevel(Unit) < 1
+            or (DC.MN and UnitInRange and (function() local r, c = UnitInRange(Unit); return c and not r end)()) then
             if PreviousStatus ~= FAR then
                 self.Color = MF_colors[FAR];
                 self.UnitStatus = FAR;

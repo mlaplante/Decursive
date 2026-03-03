@@ -349,6 +349,10 @@ function D:PLAYER_REGEN_DISABLED() -- {{{
     -- this is not reliable for testing unitframe modifications authorization,
     -- this event fires after the player enters in combat, only InCombatLockdown() may be used for critical checks
     self.Status.Combat = true;
+    if DC.MN then
+        self.Status.InSecretMode = true; -- Phase 1.4: entering combat activates secret mode on Midnight
+        D:UpdateModeIndicator();         -- Phase 3B: switch handle dot to amber
+    end
     if self.MFContainerHandle.isMoving then
         self.MFContainer:StopMovingOrSizing();
         self.MFContainerHandle.isMoving = false;
@@ -362,6 +366,9 @@ do
     function D:PLAYER_REGEN_ENABLED() -- LeaveCombat
         --D:Debug("Leaving combat");
         self.Status.Combat = false;
+        self.Status.InSecretMode = false;   -- Phase 1.4: leaving combat clears secret mode
+        self.Status.DispelTypeCache = {};    -- Phase 2A: clear stale per-unit dispel type cache
+        D:UpdateModeIndicator();             -- Phase 3B: switch handle dot to green
 
         -- test for debug report
         if #T._DebugTextTable > 0 and GetTime() - LastDebugReportNotification > 300 * 3 then
@@ -373,6 +380,55 @@ do
         end
     end
 end--}}}
+
+-- Phase 2A: RAID_PLAYER_DISPELLABLE handler
+-- Fires when a group member has a dispellable debuff (Midnight only).
+-- Provides unit token + dispel type without spell IDs. Stores in a short-lived
+-- cache used by Phase 2B to recover wrong-modifier click alerts in secret mode.
+if DC.MN then
+    function D:RAID_PLAYER_DISPELLABLE(event, unit, dispelType) -- {{{
+        if unit and dispelType then
+            self.Status.InSecretMode = true; -- ensure flag is set when this event fires
+            self.Status.DispelTypeCache[unit] = { type = dispelType, timestamp = GetTime() };
+            D:Debug("RAID_PLAYER_DISPELLABLE: unit=%s dispelType=%s", unit, dispelType);
+        end
+    end --}}}
+
+    -- Phase 4B: Timed retry blacklist — replaces the CLEU SPELL_MISSED / SPELL_CAST_FAILED
+    -- LOS blacklisting path (CLEU is unavailable in Midnight). When a player dispel cast
+    -- fails, the target unit is blacklisted for the configured CureBlacklist duration, then
+    -- automatically re-evaluated via a scheduled checkForDebuff call.
+    function D:UNIT_SPELLCAST_FAILED(event, unitTarget, castGUID, spellID) -- {{{
+        if unitTarget ~= "player" then return end
+        if not self.Status.ClickedMF then return end
+        if not self.Status.ClickedMF.CurrUnit then return end
+
+        local unit = self.Status.ClickedMF.CurrUnit;
+        local blacklistDuration = self.profile.CureBlacklist or 0;
+
+        if blacklistDuration > 0 and (
+            not self.profile.DoNot_Blacklist_Prio_List
+            or not self:IsInPriorList(self.Status.Unit_Array_UnitToGUID[unit])
+        ) then
+            self.Status.Blacklisted_Array[unit] = blacklistDuration;
+            self:ScheduleDelayedCall("Dcr_Update"..unit,
+                self.Status.ClickedMF.UpdateSkippingSetBuf,
+                self.db.global.DebuffsFrameRefreshRate,
+                self.Status.ClickedMF);
+            -- Schedule blacklist expiry and retry after the configured duration
+            self:ScheduleDelayedCall("Dcr_Unblacklist_"..unit, function()
+                if D.Status.Blacklisted_Array[unit] then
+                    D.Status.Blacklisted_Array[unit] = nil;
+                    D:checkForDebuff(unit);
+                end
+            end, blacklistDuration);
+            D:Debug("Phase 4B: blacklisted %s for %ds after cast failure", unit, blacklistDuration);
+        end
+
+        self.Status.ClickedMF = false;
+        self.Status.ClickCastingWIP = false;
+    end --}}}
+end
 
 
 do

@@ -670,6 +670,22 @@ local function GetStaticOptions ()
         hidden = function () return not D:IsEnabled(); end,
         disabled = function () return not D:IsEnabled(); end,
         args = {
+            -- Phase 3B: Midnight operating mode status banner (only shown on Midnight builds)
+            midnight_mode_status = {
+                type = "description",
+                order = -1,
+                hidden = function() return not DC.MN end,
+                name = function()
+                    if D.Status.InSecretMode then
+                        return "|cFFFF8800\226\172\164 Midnight \226\128\148 Limited Mode|r\n"
+                            .. "Operating in combat with secret aura restrictions. Dispel detection uses RAID_PLAYER_DISPELLABLE "
+                            .. "(debuff type only). Modifier-key alerts work at type level. Spell IDs and debuff timers unavailable."
+                    else
+                        return "|cFF00FF00\226\172\164 Midnight \226\128\148 Full Mode|r\n"
+                            .. "Operating out of combat. Full debuff details available via C_UnitAuras."
+                    end
+                end,
+            },
             -- Command line only {{{
             -- enable and disable
             enable = {
