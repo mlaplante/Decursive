@@ -1227,7 +1227,8 @@ function D:OnEnable() -- called after PLAYER_LOGIN -- {{{
         D.eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
     else
         D.eventFrame:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
-        D.eventFrame:RegisterEvent("RAID_PLAYER_DISPELLABLE") -- Phase 2A: per-unit dispel type cache
+        D.eventFrame:RegisterEvent("RAID_PLAYER_DISPELLABLE")   -- Phase 2A: per-unit dispel type cache
+        D.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")     -- Phase 4B: timed retry blacklist
     end
 
     D.eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN");
