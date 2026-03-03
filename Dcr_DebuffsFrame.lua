@@ -977,10 +977,25 @@ function MicroUnitF.OnPreClick(frame, Button) -- {{{
         D:Println(L["HLP_NOTHINGTOCURE"]);
 
         -- detect wrong button click and prepare for not-in-line-of-sight casting failures in coordination with CLEU (unavailable in MN)
-    elseif (frame.Object.UnitStatus == AFFLICTED and frame.Object.Debuffs[1] and not frame.Object.Debuffs[1].secretMode) then
-        local NeededPrio = D:GiveSpellPrioNum(frame.Object.Debuffs[1].Type);
+    elseif (frame.Object.UnitStatus == AFFLICTED and frame.Object.Debuffs[1]) then
         local Unit = frame.Object.CurrUnit; -- shortcut
 
+        -- Phase 2B: In secret mode, recover the dispel type from the RAID_PLAYER_DISPELLABLE
+        -- cache (TTL=3s) to enable type-level wrong-modifier alerting without spell IDs.
+        -- Out of combat the full debuff type from Debuffs[1].Type is used as before.
+        local dispelType;
+        if not frame.Object.Debuffs[1].secretMode then
+            dispelType = frame.Object.Debuffs[1].Type;
+        else
+            local cached = D.Status.DispelTypeCache and D.Status.DispelTypeCache[Unit];
+            if cached and (GetTime() - cached.timestamp) < 3 then
+                dispelType = cached.type; -- type-level recovery from RAID_PLAYER_DISPELLABLE
+                D:Debug("Phase 2B: recovered dispel type %s for %s from cache", dispelType, Unit);
+            end
+            -- nil dispelType when cache is stale/missing: skip alert, fall through to ClickCastingWIP
+        end
+
+        local NeededPrio = dispelType and D:GiveSpellPrioNum(dispelType);
 
         -- there is no spell for the requested prio ? (no spell registered to this modifier+mousebutton)
         if modifier and RequestedPrio and not D:tcheckforval(D.Status.CuringSpellsPrio, RequestedPrio) then
@@ -1001,13 +1016,13 @@ function MicroUnitF.OnPreClick(frame, Button) -- {{{
             end
         end
 
-        if RequestedPrio and NeededPrio ~= RequestedPrio then
+        if RequestedPrio and NeededPrio and NeededPrio ~= RequestedPrio then
             D:errln(L["HLP_WRONGMBUTTON"]);
-            if NeededPrio and MF_colors[NeededPrio] then
+            if MF_colors[NeededPrio] then
                 D:Println(L["HLP_USEXBUTTONTOCURE"], D:ColorText(DC.MouseButtonsReadable[ D.db.global.MouseButtons[NeededPrio] ], D:NumToHexColor(MF_colors[NeededPrio])));
                 --@debug@
             else
-                D:AddDebugText("Button wrong click info bug: NeededPrio:", NeededPrio, "Unit:", Unit, "RequestedPrio:", RequestedPrio, "Button clicked:", Button, "MF_colors:", unpack(MF_colors), "Debuff Type:", frame.Object.Debuffs[1].Type);
+                D:AddDebugText("Button wrong click info bug: NeededPrio:", NeededPrio, "Unit:", Unit, "RequestedPrio:", RequestedPrio, "Button clicked:", Button, "MF_colors:", unpack(MF_colors), "Debuff Type:", dispelType or "nil(secretMode)");
                 --@end-debug@
             end
         elseif RequestedPrio and D.Status.HasSpell then -- useless block in Midnight as there is no CLEU anymore to detect cast failures.
