@@ -582,6 +582,7 @@ end
 
 function D:DECURSIVE_TALENTS_AVAILABLE()
     D:Debug("|cFFFF0000Talents are available recnfiguration in 1 second|r");
+    D:AddDebugText("SC:4 DECURSIVE_TALENTS_AVAILABLE MyClass=" .. tostring(select(2, UnitClass("player")))); -- DEBUG checkpoint
     -- Call SetConfiguration directly (not ReConfigure) so the addon fully initializes
     -- even if the initial SetConfiguration call during OnEnable failed (e.g. corrupt
     -- SavedVariables). ReConfigure bails out when DcrFullyInitialized is false, which
