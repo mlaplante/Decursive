@@ -80,11 +80,6 @@ local L = LibStub("AceLocale-3.0"):NewLocale("Decursive", "enUS", true, false);
 
 if not L then return end;
 
---@localization(locale="enUS", format="lua_additive_table")@
-
---@do-not-package@
----[==[
-
 -- Used for testing the addon without the packager
 L["ABOLISH_CHECK"] = "Check for \"Abolish\" before curing"
 L["ABOUT_AUTHOREMAIL"] = "AUTHOR E-MAIL"
@@ -563,8 +558,6 @@ L["OPT_PERIODICRESCAN_DESC"] = "Set the delay for global unit periodic rescan fo
 
 L["OPT_PERIODICRESCAN_REPORT"] = "Periodic scan debug reporting"
 L["OPT_PERIODICRESCAN_REPORT_DESC"] = "Create a debug report if the periodic scan finds something that was not previously detected through events."
---]==]
---@end-do-not-package@
 
 
 T._LoadedFiles["enUS.lua"] = "@project-version@";
