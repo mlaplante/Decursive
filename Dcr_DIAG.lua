@@ -377,7 +377,7 @@ do
             local D = T.Dcr;
             local knownBleedEffectsCount = 0;
 
-            for _ in pairs(D.Status.t_CheckBleedDebuffsActiveIDs) do
+            for _ in pairs(D.Status.t_CheckBleedDebuffsActiveIDs or {}) do
                knownBleedEffectsCount = knownBleedEffectsCount + 1;
            end
 
@@ -933,6 +933,10 @@ do
 
         if not D.Status then
             return errorPrefix("D.Status not available");
+        end
+
+        if not D.Status.CuringSpellsPrio then
+            return errorPrefix("D.Status.CuringSpellsPrio not available (initialization incomplete)");
         end
 
         local sucess, MouseButtons = pcall(function ()return D.db.global.MouseButtons end);
