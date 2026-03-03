@@ -1269,8 +1269,6 @@ end -- // }}}
 
 function D:SetConfiguration() -- {{{
 
-    D:AddDebugText("SC:1 MyClass=" .. tostring(DC.MyClass)); -- DEBUG checkpoint
-
     if T._SelfDiagnostic() == 2 then
         return false;
     end
@@ -1329,7 +1327,6 @@ function D:SetConfiguration() -- {{{
         D.Status.restrictions = D:GetRestrictionStates()
     end
 
-    D:AddDebugText("SC:2 reached profile assignment"); -- DEBUG checkpoint
     D.profile = D.db.profile; -- shortcut
     D.classprofile = D.db.class; -- shortcut
     -- reset: /run  LibStub("AceAddon-3.0"):GetAddon("Decursive").db.class.CureOrder = {}
@@ -1488,7 +1485,6 @@ function D:SetConfiguration() -- {{{
         end
     end
 
-    D:AddDebugText("SC:3 complete MyClass=" .. tostring(DC.MyClass)); -- DEBUG checkpoint
     D.DcrFullyInitialized = true; -- everything should be OK
     D:ShowHideButtons(true);
     D:AutoHideShowMUFs();
