@@ -1233,8 +1233,14 @@ function D:OnEnable() -- called after PLAYER_LOGIN -- {{{
         D.eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED");
     else
         D.eventFrame:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
-        D.eventFrame:RegisterEvent("RAID_PLAYER_DISPELLABLE")   -- Phase 2A: per-unit dispel type cache
-        D.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")     -- Phase 4B: timed retry blacklist
+        -- Phase 2A: RAID_PLAYER_DISPELLABLE may not exist in all Midnight builds; fail gracefully
+        if not pcall(function() D.eventFrame:RegisterEvent("RAID_PLAYER_DISPELLABLE") end) then
+            D:AddDebugText("WARN: RAID_PLAYER_DISPELLABLE event not available in this build");
+        end
+        -- Phase 4B: UNIT_SPELLCAST_FAILED may not exist in all Midnight builds; fail gracefully
+        if not pcall(function() D.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED") end) then
+            D:AddDebugText("WARN: UNIT_SPELLCAST_FAILED event not available in this build");
+        end
     end
 
     D.eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN");
