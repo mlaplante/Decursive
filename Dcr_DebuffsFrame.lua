@@ -86,6 +86,7 @@ local InCombatLockdown  = _G.InCombatLockdown;
 local GetRaidTargetIndex= _G.GetRaidTargetIndex;
 local CreateFrame       = _G.CreateFrame;
 local canaccessvalue    = _G.canaccessvalue or function(_) return true; end
+local UnitInRange       = _G.UnitInRange; -- Phase 4A: pre-cast range check
 
 -- NS def
 D.MicroUnitF = {};
@@ -160,10 +161,30 @@ local AvailableModifier = { -- {{{
 
 -- MicroUnitF STATIC methods {{{
 
+-- Phase 3B: Update the small mode indicator dot on the MUF drag handle.
+-- Shows a green dot (Full mode, OOC) or amber dot (Limited mode, in combat on Midnight).
+-- Created lazily on first call so it's safe to call before full MUF init.
+function D:UpdateModeIndicator()
+    if not DC.MN then return end
+    if not D.MFContainerHandle then return end
+    -- Create FontString child lazily on first call
+    if not D.MFHandleModeText then
+        D.MFHandleModeText = D.MFContainerHandle:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall");
+        D.MFHandleModeText:SetPoint("BOTTOM", D.MFContainerHandle, "TOP", 0, 2);
+    end
+    if D.Status.InSecretMode then
+        D.MFHandleModeText:SetText("|cFFFF8800\226\172\164|r"); -- amber dot (U+2B24)
+    else
+        D.MFHandleModeText:SetText("|cFF00FF00\226\172\164|r"); -- green dot
+    end
+    D.MFHandleModeText:Show();
+end
+
 function MicroUnitF:Show()
     -- change handle position here depending on reverse display option or in INIT?
     D.MFContainer:SetScale(D.profile.DebuffsFrameElemScale);
     self:Place (); -- not strickly necessary but avoid glitches when switching between profiles where the scale is different...
+    D:UpdateModeIndicator(); -- Phase 3B: refresh mode indicator on show
     D.MFContainer:Show();
     D.profile.ShowDebuffsFrame = true;
     self:ResetAllPositions();
@@ -1447,7 +1468,9 @@ do
             end
 
             -- UnitIsVisible() behavior is not 100% reliable so we also use UnitLevel() that will return -1 when the Unit is too far...
-        elseif not UnitIsVisible(Unit) or UnitLevel(Unit) < 1 then
+            -- Phase 4A: On Midnight, also use UnitInRange() for a proactive dispel-range check.
+        elseif not UnitIsVisible(Unit) or UnitLevel(Unit) < 1
+            or (DC.MN and UnitInRange and (function() local r, c = UnitInRange(Unit); return c and not r end)()) then
             if PreviousStatus ~= FAR then
                 self.Color = MF_colors[FAR];
                 self.UnitStatus = FAR;

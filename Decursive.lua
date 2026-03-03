@@ -827,6 +827,10 @@ do
     --local debugprofilestop = _G.debugprofilestop;
     --@end-debug@
     function D:ScanEveryBody()
+        -- Phase 3C: In Midnight secret mode (in combat), the full C_UnitAuras detail scan
+        -- is unavailable and would generate GC pressure from new table allocations.
+        -- RAID_PLAYER_DISPELLABLE events drive in-combat MUF updates instead.
+        if self.Status.InSecretMode then return end
 
         if not NoScanStatuses then
             NoScanStatuses = {[DC.ABSENT] = true, [DC.FAR] = true, [DC.BLACKLISTED] = true};
