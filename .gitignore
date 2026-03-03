@@ -3,3 +3,6 @@ changelog.txt
 
 /exclude-rsyncptr.txt
 /tags
+
+# Git worktrees
+.worktrees/
