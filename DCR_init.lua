@@ -1320,6 +1320,17 @@ function D:SetConfiguration() -- {{{
     -- reset: /run  LibStub("AceAddon-3.0"):GetAddon("Decursive").db.class.CureOrder = {}
     -- reset: /run  LibStub("AceAddon-3.0"):GetAddon("Decursive").db.class["CureOrder-"..(GetSpecialization or GetActiveTalentGroup)()][64] = nil
 
+    if not D.classprofile then
+        D:AddDebugText("SetConfiguration: D.db.class is nil - AceDB class scope unavailable");
+        T._CatchAllErrors = false;
+        return false;
+    end
+
+    if not D.classprofile.UserSpells then
+        D:AddDebugText("SetConfiguration: D.classprofile.UserSpells is nil - resetting to empty table");
+        D.classprofile.UserSpells = {};
+    end
+
     D:reset_t_CheckBleedDebuffsActiveIDs();
 
 
